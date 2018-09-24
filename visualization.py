@@ -1,0 +1,205 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
+import math
+import re
+from os import listdir
+
+from PIL import Image, ImageChops, ImageDraw, ImageFont
+
+from persistence import persist_read
+from settings import settings
+from simulation import calculate_driving_speed
+
+
+# This class turns persistent traffic load data into images
+class Visualization(object):
+    ATTRIBUTE_KEY_COMPONENT = 2
+
+    # Modes:
+    # TRAFFIC_LOAD - display absolute traffic load
+    # MAX_SPEED    - display local speed limits
+    # IDEAL_SPEED  - display calculated ideal speed based on safe breaking distance
+    # ACTUAL_SPEED - display calculated actual speed based on traffic load
+
+    # Colors:
+    # HEATMAP      - vary hue on a temperature-inspired scale from dark blue to red
+    # MONOCHROME   - vary brightness from black to white
+
+    def __init__(self, mode='TRAFFIC_LOAD', color_mode='HEATMAP'):
+        print("Welcome to PyStreets visualization!")
+        print("Current display mode:", mode, "with color mode", color_mode)
+
+        self.max_resolution = (15000, 15000)
+        self.zoom = 1
+        self.coord2km = (111.32, 66.4)  # distances between 2 deg of lat/lon
+        self.bounds = None
+        self.street_network = None
+        self.node_coords = dict()
+        self.mode = mode
+        self.color_mode = color_mode
+        self.street_network_filename_expression = re.compile("^street_network_[0-9]+.pystreets$")
+        self.traffic_load_filename_expression = re.compile("^traffic_load_[0-9]+.pystreets$")
+
+    def visualize(self):
+        # find files
+        all_files = listdir(settings['persistent_files_dir'])
+        street_network_files = list(filter(self.street_network_filename_expression.search, all_files))
+        traffic_load_files = list(filter(self.traffic_load_filename_expression.search, all_files))
+
+        # keep max traffic load to setup legend later
+        max_load = 1
+
+        # find max traffic load
+        for traffic_load_file, street_network_file in zip(traffic_load_files, street_network_files):
+            traffic_load = persist_read(traffic_load_file, is_array=True)
+            street_network = persist_read(street_network_file)
+            for street, street_index, length, max_speed, number_of_lanes in street_network:
+                max_load = max(max_load, traffic_load[street_index] / number_of_lanes)
+        step = 0
+        while len(traffic_load_files) > 0:
+            step += 1
+            print("Step counter", step)
+
+            # check if there is a street network for the current step and load it
+            street_network_filename = "street_network_" + str(step) + ".pystreets"
+            if street_network_filename in street_network_files:
+                print("Found street network data, reading...")
+                self.street_network = persist_read(street_network_filename)
+                self.bounds = self.street_network.bounds
+                self.zoom = self.max_resolution[0] / max((self.bounds[0][1] - self.bounds[0][0]) * self.coord2km[0],
+                                                         (self.bounds[1][1] - self.bounds[1][0]) * self.coord2km[1])
+
+                for node in self.street_network.get_nodes():
+                    coords = self.street_network.node_coordinates(node)
+                    point = dict()
+                    for i in range(2):
+                        point[i] = (coords[i] - self.bounds[i][0]) * self.coord2km[i] * self.zoom
+                    self.node_coords[node] = (
+                        point[1], self.max_resolution[1] - point[0])  # x = longitude, y = latitude
+
+            # check if there is traffic load for the current step and draw it
+            traffic_load_filename = "traffic_load_" + str(step) + ".pystreets"
+            if traffic_load_filename in traffic_load_files:
+                print("  Found traffic data, reading and drawing...")
+                traffic_load = persist_read(traffic_load_filename, is_array=True)
+                street_network_image = Image.new("RGBA", self.max_resolution, (0, 0, 0, 255))
+                draw = ImageDraw.Draw(street_network_image)
+                finished_streets = dict()
+                for street, street_index, length, max_speed, number_of_lanes in self.street_network:
+                    width = 1  # max_speed / 50 looks bad for motorways
+                    value = 0
+                    current_traffic_load = traffic_load[street_index] / number_of_lanes
+                    if self.mode == 'TRAFFIC_LOAD':
+                        value = 1.0 * math.sqrt(current_traffic_load / max_load)  # Sqrt for better visibility
+                    if self.mode == 'MAX_SPEED':
+                        value = min(1.0, 1.0 * max_speed / 140)
+                    if self.mode == 'IDEAL_SPEED':
+                        ideal_speed = calculate_driving_speed(length, max_speed, 0)
+                        value = min(1.0, 1.0 * ideal_speed / 140)
+                    if self.mode == 'ACTUAL_SPEED':
+                        actual_speed = calculate_driving_speed(length, max_speed, current_traffic_load)
+                        value = min(1.0, 1.0 * actual_speed / 140)
+                    if self.mode == "NUMBER_OF_LANES":
+                        value = min(1.0, number_of_lanes / 5)
+                    if frozenset(street) in finished_streets.keys():
+                        value += finished_streets[frozenset(street)]
+                    color = self.value_to_color(value)
+                    draw.line([self.node_coords[street[0]], self.node_coords[street[1]]],
+                              fill=color, width=width)
+                    finished_streets[frozenset(street)] = value
+
+                street_network_image = self.image_finalize(street_network_image, max_load)
+                print("  Saving image to disk (" + settings['renders_dir'] + self.mode.lower() + "_" + str(step) +
+                      ".png) ...")
+                street_network_image.save(settings['renders_dir'] + self.mode.lower() + "_" + str(step) + ".png")
+
+                traffic_load_files.remove(traffic_load_filename)
+
+        print("Done!")
+
+    def value_to_color(self, value):
+        value = min(1.0, max(0.0, value))
+        if self.color_mode == 'MONOCHROME':
+            brightness = min(255, int(15 + 240 * value))
+            return brightness, brightness, brightness, 0
+        if self.color_mode == 'HEATMAP':
+            limit = 0
+            if value <= limit:  # almost black to blue
+                return "hsl(300,100%, 8%)"
+            else:  # blue to red
+                return "hsl(" + str(int(255 * (1 - (value - limit) / 1 - limit))) + ",100%," + str(
+                        30 + 20 * value) + "%)"
+
+    def image_finalize(self, street_network_image, max_load):
+        # take the current street network and make it pretty
+        street_network_image = self.auto_crop(street_network_image)
+
+        white = (255, 255, 255, 0)
+        black = (0, 0, 0, 0)
+        padding = self.max_resolution[0] // 40
+        legend = Image.new("RGBA", street_network_image.size, (0, 0, 0, 255))
+        font = ImageFont.load_default()
+        draw = ImageDraw.Draw(legend)
+        bar_outer_width = self.max_resolution[0] // 50
+        bar_inner_width = min(bar_outer_width - 4, int(bar_outer_width * 0.85))
+        # make sure the difference is a multiple of 4
+        bar_inner_width = bar_inner_width - (bar_outer_width - bar_inner_width) % 4
+        bar_offset = max(2, (bar_outer_width - bar_inner_width) // 2)
+
+        if self.mode in ['TRAFFIC_LOAD', 'MAX_SPEED', 'IDEAL_SPEED', 'ACTUAL_SPEED', 'NUMBER_OF_LANES']:
+            draw.rectangle([(0, 0), (bar_outer_width, legend.size[1] - 1)], fill=white)
+            border_width = int(bar_offset / 2)
+            draw.rectangle(
+                    [(border_width, border_width), (bar_outer_width - border_width, legend.size[1] - 1 - border_width)],
+                    fill=black)
+            for y in range(bar_offset, legend.size[1] - bar_offset):
+                value = 1.0 * (y - bar_offset) / (legend.size[1] - 2 * bar_offset)
+                color = self.value_to_color(1.0 - value)  # highest value at the top
+                draw.line([(bar_offset, y), (bar_offset + bar_inner_width, y)], fill=color)
+            if self.mode == 'TRAFFIC_LOAD':
+                top_text = str(round(max_load, 1)) + " cars gone through per lane"
+                bottom_text = "0 cars gone through"
+            elif self.mode == 'MAX_SPEED':
+                top_text = "speed limit: 140 km/h or higher"
+                bottom_text = "speed limit: 0 km/h"
+            elif self.mode == 'IDEAL_SPEED':
+                top_text = "ideal driving speed: 140 km/h or higher"
+                bottom_text = "ideal driving speed: 0 km/h"
+            elif self.mode == 'ACTUAL_SPEED':
+                top_text = "actual driving speed: 140 km/h or higher"
+                bottom_text = "actual driving speed: 0 km/h"
+            elif self.mode == "NUMBER_OF_LANES":
+                top_text = "5 lanes"
+                bottom_text = "0 lanes"
+            else:
+                raise ValueError("mode is not one of 'TRAFFIC_LOAD', 'MAX_SPEED', 'IDEAL_SPEED', 'ACTUAL_SPEED' or "
+                                 "'NUMBER_OF_LANES'")
+            draw.text((int(bar_outer_width * 1.3), 0), top_text, font=font, fill=white)
+            box = draw.textsize(bottom_text, font=font)
+            draw.text((int(bar_outer_width * 1.3), legend.size[1] - box[1]), bottom_text, font=font, fill=white)
+
+        legend = self.auto_crop(legend)
+
+        copyright = "Generated using data from the OpenStreetMap project."
+        copyright_size = draw.textsize(copyright, font=font)
+
+        final_width = street_network_image.size[0] + legend.size[0] + 3 * padding
+        final_height = legend.size[1] + 2 * padding + copyright_size[1] + 1
+        final = Image.new("RGB", (final_width, final_height), black)
+        final.paste(street_network_image, (padding, padding))
+        final.paste(legend, (street_network_image.size[0] + 2 * padding, padding))
+        ImageDraw.Draw(final).text((2, legend.size[1] + 2 * padding), copyright, font=font, fill=white)
+        return final
+
+    @staticmethod
+    def auto_crop(image):
+        # remove black edges from image
+        empty = Image.new("RGBA", image.size, (0, 0, 0))
+        difference = ImageChops.difference(image, empty)
+        bbox = difference.getbbox()
+        return image.crop(bbox)
+
+
+if __name__ == "__main__":
+    visualization = Visualization(mode='TRAFFIC_LOAD')
+    visualization.visualize()
