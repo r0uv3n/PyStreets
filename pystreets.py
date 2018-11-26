@@ -88,8 +88,9 @@ class PyStreets(object):
 
 
 if __name__ == "__main__":
+    instance_name = "PyStreets"
     if settings['reuse_data']:
-        MainSim = PyStreets(existing_data=None, existing_network=None, name="PyStreets")
+        MainSim = PyStreets(existing_data=None, existing_network=None, name=instance_name)
     else:
-        MainSim = PyStreets(existing_data=None, existing_network=None, name="PyStreets")
+        MainSim = PyStreets(existing_data=None, existing_network=None, name=instance_name)
     MainSim.run()
