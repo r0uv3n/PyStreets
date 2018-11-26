@@ -15,13 +15,14 @@ class PyStreets(object):
 
     def __init__(self, osm_filename, name, existing_data=None, existing_network=None):
         self.name = name
+        self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
         # set up logging
         self.logger = logger.init_logger(module="PyStreets", name=self.name, log_callback=None)
         self.logger.info("Logging initialized")
 
         self.logger.info("Setting up persistence")
-        self.persist_write = partial(persist_write, sub_dir=f"{self.name}/")
-        self.persist_read = partial(persist_read, sub_dir=f"{self.name}/")
+        self.persist_write = partial(persist_write, directory=self.persistent_files_dir)
+        self.persist_read = partial(persist_read, directory=self.persistent_files_dir)
 
         self.logger.info("Initializing PyStreets")
 
@@ -97,6 +98,6 @@ class PyStreets(object):
 
 if __name__ == "__main__":
     instance_name = "luebeck_zentrum.osm"
-    MainSim = PyStreets(osm_filename="luebeck_zentrum.osm", existing_data=None,
-                        existing_network=None, name="Lübeck Zentrum")
+    MainSim = PyStreets(osm_filename="luebeck_klein.osm", existing_data=None,
+                        existing_network=None, name="Lübeck Klein")
     MainSim.run(visualize=True)

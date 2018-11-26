@@ -1,6 +1,6 @@
+import os
 import re
 from functools import partial
-from os import listdir
 
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
@@ -30,8 +30,10 @@ class Visualization(object):
     def __init__(self, mode='TRAFFIC_LOAD', color_mode='HEATMAP',
                  name="PyStreets", log_callback=None):
         self.name = name
+        self.renders_dir = f"{settings['renders_dir']}{self.name}/"
+        self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
         self.logger = logger.init_logger(module="Visualization", name=self.name, log_callback=log_callback)
-        self.persist_read = partial(persist_read, sub_dir=f"{name}/")
+        self.persist_read = partial(persist_read, directory=self.persistent_files_dir)
         self.max_resolution = (15000, 15000)
         self.zoom = 1
         self.coord2km = (111.32, 66.4)  # distances between 2 deg of lat/lon
@@ -44,7 +46,7 @@ class Visualization(object):
 
     def visualize(self):
         self.logger.info("Finding files")
-        all_files = listdir(f"{settings['persistent_files_dir']}{self.name}")
+        all_files = os.listdir(self.persistent_files_dir)
         traffic_load_files = list(filter(self.traffic_load_filename_expression.search, all_files))
 
         self.logger.info("Reading street network")
@@ -53,7 +55,7 @@ class Visualization(object):
         self.logger.debug("Finding maximum traffic load")
         max_load = 1
         for traffic_load_file in traffic_load_files:
-            traffic_load = persist_read(f"{self.name}/{traffic_load_file}", is_array=True)
+            traffic_load = self.persist_read(traffic_load_file, is_array=True)
             for street, street_index, length, max_speed, number_of_lanes in self.street_network:
                 max_load = max(max_load, traffic_load[street_index] / number_of_lanes)
         self.logger.debug(f"Maximum load is {max_load}")
@@ -76,8 +78,9 @@ class Visualization(object):
                 self.logger.info("Drawing data")
                 street_network_image: Image = self.draw(max_load, traffic_load, self.mode)
                 self.logger.info(f"Saving image to disk \
-                                 ({settings['renders_dir']}{self.name}/{self.mode.lower()}_{step}.png)")
-                street_network_image.save(f"{settings['renders_dir']}{self.name}/{self.mode.lower()}_{step}.png")
+                                 ({self.renders_dir}{self.mode.lower()}_{step}.png)")
+                os.makedirs(os.path.dirname(self.renders_dir), exist_ok=True)
+                street_network_image.save(f"{self.renders_dir}{self.mode.lower()}_{step}.png")
 
                 traffic_load_files.remove(traffic_load_filename)
 

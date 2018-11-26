@@ -22,9 +22,9 @@ def persist_deserialize(data, compressed=True):
         return pickle.loads(data)
 
 
-def persist_write(filename, data, compress=True, is_array=False, sub_dir=""):
+def persist_write(filename, data, compress=True, is_array=False, directory=settings['persistent_files_dir']):
     """This function saves a data structure to a file"""
-    filename = settings['persistent_files_dir'] + sub_dir + filename
+    filename = directory + filename
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "wb") as f:
         if is_array:
