@@ -1,13 +1,12 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*
 from collections import namedtuple
 
 from pygraph.algorithms.minmax import shortest_path
 from pygraph.classes.digraph import digraph
 
 
-# This class represents a street network
 class StreetNetwork(object):
+    """This class represents a street_id network"""
+
     STREET_ATTRIBUTE_INDEX = {
         "index"          : 0,  # duplicate word "INDEX" on purpose
         "length"         : 1,

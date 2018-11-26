@@ -1,23 +1,25 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*
 from array import array
 from itertools import repeat
-from math import sqrt
 from operator import itemgetter
 
+from math import sqrt
+
+import logger
 from settings import settings
 from street_network import StreetNetwork
 
 
-# This class does the actual simulation steps
 class Simulation(object):
+    """This class does the actual simulation steps"""
 
     # noinspection PyShadowingNames
-    def __init__(self, street_network, trips, jam_tolerance, log_callback):
+    def __init__(self, street_network, trips, jam_tolerance,
+                 name="PyStreets", log_callback=None):
+        self.name = name
+        self.logger = logger.init_logger(module="Simulation", name=self.name, log_callback=log_callback)
         self.street_network = street_network
         self.trips = trips
         self.jam_tolerance = jam_tolerance
-        self.log_callback = log_callback
         self.step_counter = 0
         self.traffic_load = array("I", repeat(0, self.street_network.street_index))
 
@@ -25,7 +27,7 @@ class Simulation(object):
 
     def step(self):
         self.step_counter += 1
-        self.log_callback("Preparing edges...")
+        self.logger.info("Preparing edges...")
 
         # update driving time based on traffic load
         for street, street_index, length, max_speed, number_of_lanes in self.street_network:
@@ -42,20 +44,21 @@ class Simulation(object):
 
             self.street_network.set_driving_time(street, driving_time)
 
-        # reset traffic load
+        self.logger.info("Resetting traffic load...")
         self.traffic_load = array("I", repeat(0, self.street_network.street_index))
 
-        origin_nr = 0
-        for origin in self.trips.keys():
+        self.logger.info("Processing trips...")
+        goal_nr = 0
+        for origin_nr, origin in enumerate(self.trips.keys()):
             # calculate all shortest paths from resident to every other node
-            origin_nr += 1
-            self.log_callback("Origin nr", str(origin_nr) + "...")
+            self.logger.debug(f"Origin nr {origin_nr}...")
             paths = self.street_network.calculate_shortest_paths(origin)
             # increase traffic load
             for goal in self.trips[origin]:
                 # is the goal even reachable at all? if not, ignore for now
                 if goal in paths:
                     # hop along the edges until we're there
+                    goal_nr += 1
                     current = goal
                     while current != origin:
                         street = (min(current, paths[current]), max(current, paths[current]))
@@ -63,6 +66,7 @@ class Simulation(object):
                         usage = settings["trip_volume"]
                         street_index = self.street_network.get_street_index(street)
                         self.traffic_load[street_index] += usage
+        self.logger.info(f"Successfully processed {len(self.trips)} origins and {goal_nr} goals")
 
     # TODO reintegrate with rest of program (or delete?)
     def road_construction(self):
@@ -71,7 +75,7 @@ class Simulation(object):
             street = self.street_network.get_street_by_index(i)
             dict_traffic_load[street] = self.traffic_load[i]
         # noinspection PyTypeChecker
-        sorted_traffic_load = sorted(dict_traffic_load.iteritems(), key=itemgetter(1))
+        sorted_traffic_load = sorted(dict_traffic_load.items(), key=itemgetter(1))
         max_decrease_index = 0.15 * len(sorted_traffic_load)  # bottom 15%
         min_increase_index = 0.95 * len(sorted_traffic_load)  # top 5%
         for i in range(len(sorted_traffic_load)):
@@ -117,8 +121,8 @@ if __name__ == "__main__":
     trips = dict()
     trips[1] = [3]
 
-    sim = Simulation(street_network, trips, 0.6, out)
+    sim = Simulation(street_network, trips, 0.6, "PyStreets", out)
     for step in range(10):
         print("Running simulation step", step + 1, "of 10...")
         sim.step()
-    # done
+    print("Done!")

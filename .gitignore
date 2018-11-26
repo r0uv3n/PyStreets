@@ -102,7 +102,7 @@
 # Microsoft Fakes
 # GhostDoc plugin setting file
 # Node.js Tools for Visual Studio
-# Visual Studio 6 build log
+# Visual Studio 6 build logger.py.info
 # Visual Studio 6 workspace options file
 # Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
 # Visual Studio LightSwitch build output
@@ -121,18 +121,26 @@
 # BizTalk build output
 # OpenCover UI analysis results
 # Azure Stream Analytics local run output
-# MSBuild Binary and Structured Log
+# MSBuild Binary and Structured logger.py.info
 # NVidia Nsight GPU debugger configuration file
 # MFractors (Xamarin productivity tool) working folder
 # PyStreets renders
 renders/*.png
 
-# PyStreets persistence
-persistent files/*.pystreets
 
 # PyStreets backups
-/backup/*/
+/backup/
 
 # osm-xml files
 *.osm
 !test.osm
+!*/.keep
+/persistent files/
+*.log
+__pycache__/
+osmdata.pyc
+persistence.pyc
+settings.pyc
+simulation.pyc
+street_network.pyc
+tripgenerator.pyc

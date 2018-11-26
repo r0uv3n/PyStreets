@@ -1,11 +1,9 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*
 from random import sample
 from time import time
 
 
-# This class creates the appropriate number of residents and manages the test_trips
 def generate_trips(number_of_residents, potential_origins, potential_goals):
+    """This class creates the appropriate number of residents and manages the test_trips"""
     trips = dict()
     number_of_goals = 0
     for i in range(0, number_of_residents):

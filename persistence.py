@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import array
+import os
 
 try:
+    # noinspection PyPep8Naming
     import cPickle as pickle
 except ImportError:
     import pickle
@@ -29,8 +28,9 @@ def persist_deserialize(data, compressed=True):
 
 
 # This function saves a data structure to a file
-def persist_write(filename, data, compress=True, is_array=False):
-    filename = settings['persistent_files_dir'] + filename
+def persist_write(filename, data, compress=True, is_array=False, sub_dir=""):
+    filename = settings['persistent_files_dir'] + sub_dir + filename
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "wb") as f:
         if is_array:
             data.tofile(f)
@@ -39,8 +39,8 @@ def persist_write(filename, data, compress=True, is_array=False):
 
 
 # This function reads a data structure from a file
-def persist_read(filename, compressed=True, is_array=False):
-    filename = settings['persistent_files_dir'] + filename
+def persist_read(filename, compressed=True, is_array=False, sub_dir=""):
+    filename = settings['persistent_files_dir'] + sub_dir + filename
     with open(filename, "rb") as f:
         data = f.read()
     if is_array:

@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 from collections import namedtuple
-from math import sqrt, radians, sin, cos, asin
 from time import time
 
 import osmread
+from math import sqrt, radians, sin, cos, asin
 
 from street_network import StreetNetwork
 
