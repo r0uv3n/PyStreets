@@ -17,6 +17,7 @@ class PyStreets(object):
         self.name = name
         # set up logging
         self.logger = logger.init_logger(module="PyStreets", name=self.name, log_callback=None)
+        self.logger.setLevel("SPAM")
         self.logger.info("Logging initialized")
         self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
         self.logger.debug(f"Persistent files directory is {self.persistent_files_dir}")

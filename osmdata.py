@@ -1,8 +1,8 @@
 from collections import namedtuple
+from math import sqrt, radians, sin, cos, asin
 from time import time
 
 import osmread
-from math import sqrt, radians, sin, cos, asin
 
 from street_network import StreetNetwork
 
@@ -87,6 +87,8 @@ class GraphBuilder(object):
         # construct the actual graph structure from the input data
         for way in self.all_osm_ways.values():
             if "highway" in way.tags:
+                if not way.nodes:
+                    continue
                 if not self.street_network.has_node(way.nodes[0]):
                     coord = self.coords[way.nodes[0]]
                     self.street_network.add_node(way.nodes[0], coord[self.longitude], coord[self.latitude])
