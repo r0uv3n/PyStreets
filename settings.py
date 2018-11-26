@@ -3,12 +3,10 @@ settings = {
     "renders_dir"                      : "./renders/",
     "persistent_files_dir"             : "./persistent files/",
     "osm_dir"                          : "./osm/",
-    "osm_file"                         : "osm/bad_oldesloe.osm",
     "logging"                          : "stdout",
     "logs_dir"                         : "./logs/",
     "persist_traffic_load"             : False,
     "random_seed"                      : None,  # set to None to use system time
-    "reuse_data"                       : True,
 
     # simulation settings
     "max_simulation_steps"             : 4,

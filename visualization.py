@@ -44,7 +44,7 @@ class Visualization(object):
 
     def visualize(self):
         self.logger.info("Finding files")
-        all_files = listdir(settings['persistent_files_dir'])
+        all_files = listdir(f"{settings['persistent_files_dir']}{self.name}")
         traffic_load_files = list(filter(self.traffic_load_filename_expression.search, all_files))
 
         self.logger.info("Reading street network")
@@ -53,7 +53,7 @@ class Visualization(object):
         self.logger.debug("Finding maximum traffic load")
         max_load = 1
         for traffic_load_file in traffic_load_files:
-            traffic_load = persist_read(traffic_load_file, is_array=True)
+            traffic_load = persist_read(f"{self.name}/{traffic_load_file}", is_array=True)
             for street, street_index, length, max_speed, number_of_lanes in self.street_network:
                 max_load = max(max_load, traffic_load[street_index] / number_of_lanes)
         self.logger.debug(f"Maximum load is {max_load}")
@@ -65,19 +65,19 @@ class Visualization(object):
             self.logger.info(f"Doing step nr {step}")
 
             # check if there is traffic load for the current step and draw it
-            traffic_load_filename = "traffic_load_" + str(step) + ".pystreets"
+            traffic_load_filename = f"traffic_load_{step}.pystreets"
             self.logger.debug(f"Traffic load filename is {traffic_load_filename}")
             if traffic_load_filename in traffic_load_files:
                 self.logger.debug("Found traffic data")
 
                 self.logger.info("Reading traffic load")
-                traffic_load = persist_read(traffic_load_filename, is_array=True)
+                traffic_load = self.persist_read(traffic_load_filename, is_array=True)
 
                 self.logger.info("Drawing data")
                 street_network_image: Image = self.draw(max_load, traffic_load, self.mode)
                 self.logger.info(f"Saving image to disk \
-                                 ({settings['renders_dir']}{self.mode.lower()}_{step}.png)")
-                street_network_image.save(f"{settings['renders_dir']}{self.mode.lower()}_{step}.png")
+                                 ({settings['renders_dir']}{self.name}/{self.mode.lower()}_{step}.png)")
+                street_network_image.save(f"{settings['renders_dir']}{self.name}/{self.mode.lower()}_{step}.png")
 
                 traffic_load_files.remove(traffic_load_filename)
 
@@ -113,7 +113,7 @@ class Visualization(object):
         return street_network_image
 
     def read_street_network(self, street_network_filename):
-        self.street_network = persist_read(street_network_filename)
+        self.street_network = self.persist_read(street_network_filename)
         self.bounds = self.street_network.bounds
         self.zoom = self.max_resolution[0] / max((self.bounds[0][1] - self.bounds[0][0]) * self.coord2km[0],
                                                  (self.bounds[1][1] - self.bounds[1][0]) * self.coord2km[1])
@@ -189,7 +189,7 @@ class Visualization(object):
         legend = self.auto_crop(legend)
 
         copyright_text = "Generated using data from the OpenStreetMap project."
-        copyright_size = draw.textsize(copyright, font=font)
+        copyright_size = draw.textsize(copyright_text, font=font)
 
         final_width = street_network_image.size[0] + legend.size[0] + 3 * padding
         final_height = legend.size[1] + 2 * padding + copyright_size[1] + 1
@@ -209,5 +209,5 @@ class Visualization(object):
 
 
 if __name__ == "__main__":
-    visualization = Visualization(mode='TRAFFIC_LOAD', name="PyStreets")
+    visualization = Visualization(mode='TRAFFIC_LOAD', name="Lübeck Zentrum")
     visualization.visualize()

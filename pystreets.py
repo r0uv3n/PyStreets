@@ -7,15 +7,16 @@ from persistence import persist_write, persist_read
 from settings import settings
 from simulation import Simulation
 from tripgenerator import generate_trips
+from visualization import Visualization
 
 
 class PyStreets(object):
     """This class runs the Streets program."""
 
-    def __init__(self, existing_data=None, existing_network=None, name="PyStreets"):
+    def __init__(self, osm_filename, name, existing_data=None, existing_network=None):
         self.name = name
         # set up logging
-        self.logger = logger.init_logger(module=None, name=self.name, log_callback=None)
+        self.logger = logger.init_logger(module="PyStreets", name=self.name, log_callback=None)
         self.logger.info("Logging initialized")
 
         self.logger.info("Setting up persistence")
@@ -30,7 +31,7 @@ class PyStreets(object):
         seed(random_seed)
         if existing_network is None:
             self.logger.info("Reading OpenStreetMap data")
-            self.data = GraphBuilder(settings["osm_file"])
+            self.data = GraphBuilder(settings["osm_dir"] + osm_filename)
 
             self.logger.info("Building street network")
             self.street_network = self.data.build_street_network()
@@ -39,10 +40,10 @@ class PyStreets(object):
             self.data.find_node_categories()
 
             self.logger.info("Saving OpenStreetMap data to disk")
-            self.persist_write(filename="data.pystreets", data=self.data)
+            self.persist_write(filename=f"data.pystreets", data=self.data)
 
             self.logger.info("Saving street network to disk")
-            self.persist_write("/street_network.pystreets", self.street_network)
+            self.persist_write(f"street_network.pystreets", self.street_network)
         else:
             self.logger.info("Reading existing OpenStreetMap data from disk")
             self.data = self.persist_read(existing_data)
@@ -50,7 +51,9 @@ class PyStreets(object):
             self.logger.info("Reading existing street network from disk")
             self.street_network = self.persist_read(existing_network)
 
-    def run(self):
+        self.visualization = Visualization()
+
+    def run(self, visualize=False):
         self.logger.info("Generating test_trips")
         number_of_residents = settings["number_of_residents"]
         if settings["use_attributed_nodes"]:
@@ -84,13 +87,16 @@ class PyStreets(object):
             simulation.step()
             self.logger.info("Saving traffic load to disk")
             self.persist_write(f"traffic_load_{step + 1}.pystreets", simulation.traffic_load, is_array=True)
+        self.logger.info("Simulation complete")
+        if visualize:
+            self.logger.info("Starting visualization")
+            self.visualization.visualize()
+            self.logger.info("Visualization complete")
         self.logger.info("Done!")
 
 
 if __name__ == "__main__":
-    instance_name = "PyStreets"
-    if settings['reuse_data']:
-        MainSim = PyStreets(existing_data=None, existing_network=None, name=instance_name)
-    else:
-        MainSim = PyStreets(existing_data=None, existing_network=None, name=instance_name)
-    MainSim.run()
+    instance_name = "luebeck_zentrum.osm"
+    MainSim = PyStreets(osm_filename="luebeck_zentrum.osm", existing_data=None,
+                        existing_network=None, name="Lübeck Zentrum")
+    MainSim.run(visualize=True)
