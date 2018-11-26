@@ -15,11 +15,11 @@ class PyStreets(object):
 
     def __init__(self, osm_filename, name, existing_data=None, existing_network=None):
         self.name = name
-        self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
         # set up logging
         self.logger = logger.init_logger(module="PyStreets", name=self.name, log_callback=None)
         self.logger.info("Logging initialized")
-
+        self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
+        self.logger.debug(f"Persistent files directory is {self.persistent_files_dir}")
         self.logger.info("Setting up persistence")
         self.persist_write = partial(persist_write, directory=self.persistent_files_dir)
         self.persist_read = partial(persist_read, directory=self.persistent_files_dir)
@@ -52,9 +52,9 @@ class PyStreets(object):
             self.logger.info("Reading existing street network from disk")
             self.street_network = self.persist_read(existing_network)
 
-        self.visualization = Visualization()
+        self.visualization = Visualization(self.name)
 
-    def run(self, visualize=False):
+    def run(self, visualize_mode=None):
         self.logger.info("Generating test_trips")
         number_of_residents = settings["number_of_residents"]
         if settings["use_attributed_nodes"]:
@@ -89,15 +89,15 @@ class PyStreets(object):
             self.logger.info("Saving traffic load to disk")
             self.persist_write(f"traffic_load_{step + 1}.pystreets", simulation.traffic_load, is_array=True)
         self.logger.info("Simulation complete")
-        if visualize:
+        if visualize_mode is not None:
             self.logger.info("Starting visualization")
-            self.visualization.visualize()
+            self.visualization.visualize(visualize_mode)
             self.logger.info("Visualization complete")
         self.logger.info("Done!")
 
 
 if __name__ == "__main__":
     instance_name = "luebeck_zentrum.osm"
-    MainSim = PyStreets(osm_filename="luebeck_klein.osm", existing_data=None,
-                        existing_network=None, name="Lübeck Klein")
-    MainSim.run(visualize=True)
+    MainSim = PyStreets(osm_filename="luebeck_klein_1.osm", existing_data=None,
+                        existing_network=None, name="Lübeck Klein Variation")
+    MainSim.run(visualize_mode="TRAFFIC_LOAD")

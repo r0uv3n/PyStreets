@@ -27,8 +27,7 @@ class Visualization(object):
     """
     ATTRIBUTE_KEY_COMPONENT = 2
 
-    def __init__(self, mode='TRAFFIC_LOAD', color_mode='HEATMAP',
-                 name="PyStreets", log_callback=None):
+    def __init__(self, name, mode='TRAFFIC_LOAD', color_mode='HEATMAP', log_callback=None):
         self.name = name
         self.renders_dir = f"{settings['renders_dir']}{self.name}/"
         self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
@@ -40,11 +39,10 @@ class Visualization(object):
         self.bounds = None
         self.street_network = None
         self.node_coords = dict()
-        self.mode = mode
         self.color_mode = color_mode
         self.traffic_load_filename_expression = re.compile("^traffic_load_[0-9]+.pystreets$")
 
-    def visualize(self):
+    def visualize(self, mode='TRAFFIC_LOAD'):
         self.logger.info("Finding files")
         all_files = os.listdir(self.persistent_files_dir)
         traffic_load_files = list(filter(self.traffic_load_filename_expression.search, all_files))
@@ -76,11 +74,11 @@ class Visualization(object):
                 traffic_load = self.persist_read(traffic_load_filename, is_array=True)
 
                 self.logger.info("Drawing data")
-                street_network_image: Image = self.draw(max_load, traffic_load, self.mode)
+                street_network_image: Image = self.draw(max_load, traffic_load, mode)
                 self.logger.info(f"Saving image to disk \
-                                 ({self.renders_dir}{self.mode.lower()}_{step}.png)")
+                                 ({self.renders_dir}{mode.lower()}_{step}.png)")
                 os.makedirs(os.path.dirname(self.renders_dir), exist_ok=True)
-                street_network_image.save(f"{self.renders_dir}{self.mode.lower()}_{step}.png")
+                street_network_image.save(f"{self.renders_dir}{mode.lower()}_{step}.png")
 
                 traffic_load_files.remove(traffic_load_filename)
 
@@ -112,7 +110,7 @@ class Visualization(object):
             draw.line([self.node_coords[street[0]], self.node_coords[street[1]]],
                       fill=color, width=width)
             finished_streets[frozenset(street)] = value
-        street_network_image = self.image_finalize(street_network_image, max_load)
+        street_network_image = self.image_finalize(street_network_image, max_load, mode)
         return street_network_image
 
     def read_street_network(self, street_network_filename):
@@ -141,7 +139,7 @@ class Visualization(object):
                 return "hsl(" + str(int(255 * (1 - (value - limit) / 1 - limit))) + ",100%," + str(
                         30 + 20 * value) + "%)"
 
-    def image_finalize(self, street_network_image, max_load):
+    def image_finalize(self, street_network_image, max_load, mode):
         # take the current street network and make it pretty
         street_network_image = self.auto_crop(street_network_image)
 
@@ -157,7 +155,7 @@ class Visualization(object):
         bar_inner_width = bar_inner_width - (bar_outer_width - bar_inner_width) % 4
         bar_offset = max(2, (bar_outer_width - bar_inner_width) // 2)
 
-        if self.mode in ['TRAFFIC_LOAD', 'MAX_SPEED', 'IDEAL_SPEED', 'ACTUAL_SPEED', 'NUMBER_OF_LANES']:
+        if mode in ['TRAFFIC_LOAD', 'MAX_SPEED', 'IDEAL_SPEED', 'ACTUAL_SPEED', 'NUMBER_OF_LANES']:
             draw.rectangle([(0, 0), (bar_outer_width, legend.size[1] - 1)], fill=white)
             border_width = int(bar_offset / 2)
             draw.rectangle(
@@ -167,19 +165,19 @@ class Visualization(object):
                 value = 1.0 * (y - bar_offset) / (legend.size[1] - 2 * bar_offset)
                 color = self.value_to_color(1.0 - value)  # highest value at the top
                 draw.line([(bar_offset, y), (bar_offset + bar_inner_width, y)], fill=color)
-            if self.mode == 'TRAFFIC_LOAD':
+            if mode == 'TRAFFIC_LOAD':
                 top_text = str(round(max_load, 1)) + " cars gone through per lane"
                 bottom_text = "0 cars gone through"
-            elif self.mode == 'MAX_SPEED':
+            elif mode == 'MAX_SPEED':
                 top_text = "speed limit: 140 km/h or higher"
                 bottom_text = "speed limit: 0 km/h"
-            elif self.mode == 'IDEAL_SPEED':
+            elif mode == 'IDEAL_SPEED':
                 top_text = "ideal driving speed: 140 km/h or higher"
                 bottom_text = "ideal driving speed: 0 km/h"
-            elif self.mode == 'ACTUAL_SPEED':
+            elif mode == 'ACTUAL_SPEED':
                 top_text = "actual driving speed: 140 km/h or higher"
                 bottom_text = "actual driving speed: 0 km/h"
-            elif self.mode == "NUMBER_OF_LANES":
+            elif mode == "NUMBER_OF_LANES":
                 top_text = "5 lanes"
                 bottom_text = "0 lanes"
             else:
@@ -212,5 +210,5 @@ class Visualization(object):
 
 
 if __name__ == "__main__":
-    visualization = Visualization(mode='TRAFFIC_LOAD', name="Lübeck Zentrum")
-    visualization.visualize()
+    visualization = Visualization(mode='MAX_SPEED', name="Lübeck Klein")
+    visualization.visualize(mode="TRAFFIC_LOAD")

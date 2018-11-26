@@ -1,8 +1,7 @@
 from array import array
 from itertools import repeat
-from operator import itemgetter
-
 from math import sqrt
+from operator import itemgetter
 
 import logger
 from settings import settings
@@ -51,7 +50,7 @@ class Simulation(object):
         goal_nr = 0
         for origin_nr, origin in enumerate(self.trips.keys()):
             # calculate all shortest paths from resident to every other node
-            self.logger.debug(f"Origin nr {origin_nr}...")
+            self.logger.spam(f"Origin nr {origin_nr}...")
             paths = self.street_network.calculate_shortest_paths(origin)
             # increase traffic load
             for goal in self.trips[origin]:

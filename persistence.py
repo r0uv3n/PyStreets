@@ -33,9 +33,9 @@ def persist_write(filename, data, compress=True, is_array=False, directory=setti
             f.write(persist_serialize(data, compress))
 
 
-def persist_read(filename, compressed=True, is_array=False, sub_dir=""):
+def persist_read(filename, compressed=True, is_array=False, directory=settings['persistent_files_dir']):
     """This function reads a data structure from a file"""
-    filename = settings['persistent_files_dir'] + sub_dir + filename
+    filename = directory + filename
     with open(filename, "rb") as f:
         data = f.read()
     if is_array:
