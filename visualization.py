@@ -15,19 +15,13 @@ class Visualization(object):
 
     This class turns persistent traffic load data into images
 
-    :param mode
-    TRAFFIC_LOAD - display absolute traffic load
-    MAX_SPEED    - display local speed limits
-    IDEAL_SPEED  - display calculated ideal speed based on safe breaking distance
-    ACTUAL_SPEED - display calculated actual speed based on traffic load:
-
     :param color_mode
     HEATMAP      - vary hue on a temperature-inspired scale from dark blue to red
     MONOCHROME   - vary brightness from black to white
     """
     ATTRIBUTE_KEY_COMPONENT = 2
 
-    def __init__(self, name, mode='TRAFFIC_LOAD', color_mode='HEATMAP', log_callback=None):
+    def __init__(self, name, color_mode='HEATMAP', log_callback=None):
         self.name = name
         self.renders_dir = f"{settings['renders_dir']}{self.name}/"
         self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
@@ -140,6 +134,13 @@ class Visualization(object):
                         30 + 20 * value) + "%)"
 
     def image_finalize(self, street_network_image, max_load, mode):
+        """
+        :param mode
+        TRAFFIC_LOAD - display absolute traffic load
+        MAX_SPEED    - display local speed limits
+        IDEAL_SPEED  - display calculated ideal speed based on safe breaking distance
+        ACTUAL_SPEED - display calculated actual speed based on traffic load:
+        """
         # take the current street network and make it pretty
         street_network_image = self.auto_crop(street_network_image)
 
@@ -210,5 +211,5 @@ class Visualization(object):
 
 
 if __name__ == "__main__":
-    visualization = Visualization(mode='MAX_SPEED', name="Lübeck Klein")
+    visualization = Visualization(name="Lübeck Klein Variation")
     visualization.visualize(mode="TRAFFIC_LOAD")
