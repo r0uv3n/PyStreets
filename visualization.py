@@ -188,7 +188,7 @@ class Visualization(object):
 
         legend = self.auto_crop(legend)
 
-        copyright = "Generated using data from the OpenStreetMap project."
+        copyright_text = "Generated using data from the OpenStreetMap project."
         copyright_size = draw.textsize(copyright, font=font)
 
         final_width = street_network_image.size[0] + legend.size[0] + 3 * padding
@@ -196,7 +196,7 @@ class Visualization(object):
         final = Image.new("RGB", (final_width, final_height), black)
         final.paste(street_network_image, (padding, padding))
         final.paste(legend, (street_network_image.size[0] + 2 * padding, padding))
-        ImageDraw.Draw(final).text((2, legend.size[1] + 2 * padding), copyright, font=font, fill=white)
+        ImageDraw.Draw(final).text((2, legend.size[1] + 2 * padding), copyright_text, font=font, fill=white)
         return final
 
     @staticmethod
