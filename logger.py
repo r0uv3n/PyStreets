@@ -4,7 +4,7 @@ import logging
 from settings import settings
 
 
-# from StackOverflow
+# from https://stackoverflow.com/a/35804945
 def add_logging_level(level_name, level_num, method_name=None):
     """
     Comprehensively adds a new logging level to the `logging` module and the
