@@ -19,15 +19,3 @@ def generate_trips(number_of_residents, potential_origins, potential_goals):
         trips[origin] = goals
     assert number_of_goals == number_of_residents
     return trips
-
-
-if __name__ == "__main__":
-    start = time()
-
-    test_trips = generate_trips(30, {1, 2, 3, 4, 5}, {6, 7, 8, 9, 10})
-
-    generated = time()
-
-    # done
-    print("Trips: ", test_trips)
-    print("Time generating test_trips: ", generated - start, " seconds")
