@@ -48,24 +48,24 @@ class GraphBuilder(object):
         # mapping from highway types to max speeds
         # we do this so there"s always a speed limit for every edge, even if
         # none is in the OSM data
-        self.max_speed_map = dict()
-        self.max_speed_map["motorway"] = 140
-        self.max_speed_map["trunk"] = 120
-        self.max_speed_map["primary"] = 100
-        self.max_speed_map["secondary"] = 80
-        self.max_speed_map["tertiary"] = 70
-        self.max_speed_map["road"] = 50
-        self.max_speed_map["minor"] = 50
-        self.max_speed_map["unclassified"] = 50
-        self.max_speed_map["residential"] = 30
-        self.max_speed_map["track"] = 30
-        self.max_speed_map["service"] = 20
-        self.max_speed_map["path"] = 10
-        self.max_speed_map["cycleway"] = 1  # >0 to prevent infinite weights
-        self.max_speed_map["bridleway"] = 1  # >0 to prevent infinite weights
-        self.max_speed_map["pedestrian"] = 1  # >0 to prevent infinite weights
-        self.max_speed_map["footway"] = 1  # >0 to prevent infinite weights
-
+        self.max_speed_map = {
+            "motorway"    : 140,
+            "trunk"       : 120,
+            "primary"     : 100,
+            "secondary"   : 80,
+            "tertiary"    : 70,
+            "road"        : 50,
+            "minor"       : 50,
+            "unclassified": 50,
+            "residential" : 30,
+            "track"       : 30,
+            "service"     : 20,
+            "path"        : 10,
+            "cycleway"    : 1,  # >0 to prevent infinite weights
+            "bridleway"   : 1,  # >0 to prevent infinite weights
+            "pedestrian"  : 1,  # >0 to prevent infinite weights
+            "footway"     : 1,  # >0 to prevent infinite weights
+        }
         self.lane_map = {
             "residential": 2,
             "tertiary"   : 2,
