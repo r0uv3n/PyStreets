@@ -2,11 +2,11 @@ from functools import partial
 from random import random, seed
 
 import logger
-from osmdata import GraphBuilder
+from osm_data import GraphBuilder
 from persistence import persist_write, persist_read
 from settings import settings
 from simulation import Simulation
-from tripgenerator import generate_trips
+from trip_generator import generate_trips
 from visualization import Visualization
 
 

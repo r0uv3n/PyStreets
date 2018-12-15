@@ -1,6 +1,5 @@
 from collections import namedtuple
 from math import sqrt, radians, sin, cos, asin
-from time import time
 
 import osmread
 
@@ -247,6 +246,7 @@ class GraphBuilder(object):
 
 
 if __name__ == "__main__":
+    from time import time
     # instantiate counter and parser and start parsing
     start = time()
 
