@@ -50,7 +50,6 @@ class PyStreets(object):
 
         self.logger.info("Initializing PyStreets")
 
-        # set random seed based on process rank
         self.logger.info("Generating random seed")
         random_seed = settings["random_seed"]
         seed(random_seed)
@@ -102,9 +101,9 @@ class PyStreets(object):
             jam_tolerance = random()
         else:
             jam_tolerance = settings['jam_tolerance']
-        self.logger.info(f"Setting traffic jam tolerance to {round(jam_tolerance, 2)}")
+        self.logger.info(f"Set traffic jam tolerance to {round(jam_tolerance, 2)}")
 
-        # run simulation
+        self.logger.info("Running Simulation")
         simulation = Simulation(street_network=self.street_network, trips=trips,
                                 jam_tolerance=jam_tolerance, name=self.name, log_callback=self.logger)
 
