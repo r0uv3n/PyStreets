@@ -1,7 +1,6 @@
 from array import array
 from itertools import repeat
 from math import sqrt
-from operator import itemgetter
 
 import logger
 from settings import settings
@@ -66,28 +65,6 @@ class Simulation(object):
                         street_index = self.street_network.get_street_index(street)
                         self.traffic_load[street_index] += usage
         self.logger.info(f"Successfully processed {len(self.trips)} origins and {goal_nr} goals")
-
-    # TODO reintegrate with rest of program (or delete?)
-    def road_construction(self):
-        dict_traffic_load = dict()
-        for i in range(0, len(self.traffic_load)):
-            street = self.street_network.get_street_by_index(i)
-            dict_traffic_load[street] = self.traffic_load[i]
-        # noinspection PyTypeChecker
-        sorted_traffic_load = sorted(dict_traffic_load.items(), key=itemgetter(1))
-        max_decrease_index = 0.15 * len(sorted_traffic_load)  # bottom 15%
-        min_increase_index = 0.95 * len(sorted_traffic_load)  # top 5%
-        for i in range(len(sorted_traffic_load)):
-            if i <= max_decrease_index:
-                if not self.street_network.change_max_speed(sorted_traffic_load[i][0], -20):
-                    max_decrease_index += 1
-            j = len(sorted_traffic_load) - i - 1
-            if j >= min_increase_index:
-                if not self.street_network.change_max_speed(sorted_traffic_load[j][0], 20):
-                    min_increase_index -= 1
-            if max_decrease_index >= min_increase_index:
-                break
-        self.traffic_load = None
 
 
 def calculate_driving_speed(street_length, max_speed, number_of_trips, number_of_lanes=1):
