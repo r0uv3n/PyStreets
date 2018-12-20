@@ -1,6 +1,6 @@
 from collections import namedtuple
 from logging import Logger  # for typing
-from math import sqrt
+from math import sqrt, radians, sin, cos, asin
 
 import osmread
 
