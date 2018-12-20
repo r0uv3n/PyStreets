@@ -3,10 +3,13 @@ settings = {
     "renders_dir"                      : "./renders/",
     "persistent_files_dir"             : "./persistent files/",
     "osm_dir"                          : "./osm/",
-    "logging"                          : "stdout",
-    "logs_dir"                         : "./logs/",
     "persist_traffic_load"             : False,
     "random_seed"                      : None,  # set to None to use system time
+
+    # logging
+    "logging"                          : "stdout",
+    "logs_dir"                         : "./logs/",
+    "logging_level"                    : "DEBUG",
 
     # simulation settings
     "max_simulation_steps"             : 4,
@@ -22,4 +25,8 @@ settings = {
     "braking_deceleration"             : 7.5,  # m/s²
     "steps_between_street_construction": 10,
     "trip_volume"                      : 1,
+
+    # visualization settings
+    "zoom"                             : 1,
+    "max_resolution"                   : (15000, 15000),
 }

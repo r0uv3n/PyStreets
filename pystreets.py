@@ -13,14 +13,19 @@ from visualization import Visualization
 class PyStreets(object):
     """This class runs the Streets program."""
 
-    def __init__(self, osm_filename, name, existing_data=None, existing_network=None):
+    def __init__(self, name, osm_filename=None, existing_data=None, existing_network=None,
+                 visualize_mode="TRAFFIC_LOAD",
+                 color_mode="HEATMAP"):
         self.name = name
+
         # set up logging
         self.logger = logger.init_logger(module="PyStreets", name=self.name, log_callback=None)
-        self.logger.setLevel("SPAM")
-        self.logger.info("Logging initialized")
+        self.logger.setLevel(settings["logging_level"])
+        self.logger.info("Logging for PyStreets initialized")
+
         self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
         self.logger.debug(f"Persistent files directory is {self.persistent_files_dir}")
+
         self.logger.info("Setting up persistence")
         self.persist_write = partial(persist_write, directory=self.persistent_files_dir)
         self.persist_read = partial(persist_read, directory=self.persistent_files_dir)
@@ -31,15 +36,12 @@ class PyStreets(object):
         self.logger.info("Generating random seed")
         random_seed = settings["random_seed"]
         seed(random_seed)
-        if existing_network is None:
+        if existing_data is None:
             self.logger.info("Reading OpenStreetMap data")
-            self.data = GraphBuilder(settings["osm_dir"] + osm_filename)
+            self.data = GraphBuilder(settings["osm_dir"] + osm_filename, name=self.name, log_callback=self.logger)
 
-            self.logger.info("Building street network")
-            self.street_network = self.data.build_street_network()
-
-            self.logger.info("Locating area types")
-            self.data.find_node_categories()
+            self.logger.info("Getting street network")
+            self.street_network = self.data.street_network
 
             self.logger.info("Saving OpenStreetMap data to disk")
             self.persist_write(filename=f"data.pystreets", data=self.data)
@@ -53,9 +55,11 @@ class PyStreets(object):
             self.logger.info("Reading existing street network from disk")
             self.street_network = self.persist_read(existing_network)
 
-        self.visualization = Visualization(self.name)
+        self.visualization = Visualization(name=self.name, mode=visualize_mode, color_mode=color_mode,
+                                           street_network=self.street_network, log_callback=self.logger)
+        assert self.visualization.persistent_files_dir == self.persistent_files_dir
 
-    def run(self, visualize_mode=None):
+    def run(self, visualize=True):
         self.logger.info("Generating test_trips")
         number_of_residents = settings["number_of_residents"]
         if settings["use_attributed_nodes"]:
@@ -90,15 +94,16 @@ class PyStreets(object):
             self.logger.info("Saving traffic load to disk")
             self.persist_write(f"traffic_load_{step + 1}.pystreets", simulation.traffic_load, is_array=True)
         self.logger.info("Simulation complete")
-        if visualize_mode is not None:
+        if visualize:
             self.logger.info("Starting visualization")
-            self.visualization.visualize(visualize_mode)
+            self.visualization.visualize()
             self.logger.info("Visualization complete")
         self.logger.info("Done!")
 
 
 if __name__ == "__main__":
     instance_name = "luebeck_zentrum.osm"
+    visualization_mode = "TRAFFIC_LOAD"  # "TRAFFIC_LOAD", "IDEAL_SPEED", "ACTUAL_SPEED", "MAX_SPEED" - check docstrings
     MainSim = PyStreets(osm_filename="luebeck_klein_1.osm", existing_data=None,
-                        existing_network=None, name="Lübeck Klein Variation")
-    MainSim.run(visualize_mode="TRAFFIC_LOAD")
+                        existing_network=None, name="Lübeck Klein Variation", visualize_mode=visualization_mode)
+    MainSim.run()

@@ -3,6 +3,7 @@ from math import sqrt, radians, sin, cos, asin
 
 import osmread
 
+import logger
 from street_network import StreetNetwork
 
 Coordinate = namedtuple("Coordinate", ["longitude", "latitude"])
@@ -13,8 +14,11 @@ class GraphBuilder(object):
     latitude = 0
     longitude = 1
 
-    def __init__(self, osmfile):
-        # parse the input file and save its contents in memory
+    def __init__(self, osm_path, name: str = None, log_callback: Logger = None):
+        self.name = name
+        # initialize logging
+        self.logger = logger.init_logger(module="OSM_data", name=self.name, log_callback=log_callback)
+        self.logger.info("Logging for OSM_data initialized")
 
         # initialize street network
         self.street_network = StreetNetwork()
@@ -74,11 +78,17 @@ class GraphBuilder(object):
             "track"      : 1,
             "path"       : 1,
         }
+        self.logger.info("Parsing .osm data")
+        self.parse(osm_path)
 
-        self.parse(osmfile)
+        self.logger.info("Building Street Network")
+        self.build_street_network()
+
+        self.logger.info("Finding node categories")
+        self.find_node_categories()
 
     def build_street_network(self):
-        # add boundaries to street network
+        self.logger.debug("Adding boundaries to street network")
         if 9999 not in self.bounds.values() and -9999 not in self.bounds.values():
             self.street_network.set_bounds(self.bounds["min_lat"], self.bounds["max_lat"],
                                            self.bounds["min_lon"], self.bounds["max_lon"])
@@ -182,6 +192,14 @@ class GraphBuilder(object):
         self.connected_industrial_nodes = self.industrial_nodes & street_network_nodes
         self.connected_commercial_nodes = self.commercial_nodes & street_network_nodes
 
+        if not self.connected_residential_nodes:
+            self.logger.warn("Residential Nodes are empty")
+
+        if not self.connected_industrial_nodes:
+            self.logger.warn("Industrial Nodes are empty")
+        if not self.connected_commercial_nodes:
+            self.logger.warn("Commercial Nodes are empty")
+
     def parse(self, osm_file):
         for entity in osmread.parse_file(osm_file):
             if isinstance(entity, osmread.Node):
@@ -247,6 +265,7 @@ class GraphBuilder(object):
 
 if __name__ == "__main__":
     from time import time
+
     # instantiate counter and parser and start parsing
     start = time()
 

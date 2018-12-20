@@ -1,6 +1,7 @@
 import os
 import re
 from functools import partial
+from logging import Logger # for typing
 
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
@@ -8,41 +9,102 @@ import logger
 from persistence import persist_read
 from settings import settings
 from simulation import calculate_driving_speed
+from street_network import StreetNetwork # for typing
 
 
 class Visualization(object):
     """
-
     This class turns persistent traffic load data into images
 
-    :param color_mode
-    HEATMAP      - vary hue on a temperature-inspired scale from dark blue to red
-    MONOCHROME   - vary brightness from black to white
+    Attributes:
+      name: Determines renders_dir, unnecessary if renders_dir is given
+      mode: 4 options:
+    TRAFFIC_LOAD - Display absolute traffic load.
+    MAX_SPEED    - Display local speed limits.
+    IDEAL_SPEED  - Display calculated ideal speed based on safe breaking distance.
+    ACTUAL_SPEED - Display calculated actual speed based on traffic load.
+      color_mode: 2 options:
+    HEATMAP      - Vary hue on a temperature-inspired scale from dark blue to red.
+    MONOCHROME   - Vary brightness from black to white.
+      street_network: StreetNetwork to operate on, if None, read from persistent_dir.
+      log_callback: Parent Logger; If None, logs to a new file.
+      renders_dir: Directory in which ".png"s are saved.
     """
     ATTRIBUTE_KEY_COMPONENT = 2
+    coord2km = (111.32, 66.4)  # distances between 2 deg of lat/lon
 
-    def __init__(self, name, color_mode='HEATMAP', log_callback=None):
+    def __init__(self, name: str = None, mode: str = "Traffic_Load", color_mode="HEATMAP",
+                 street_network: StreetNetwork = None, log_callback: Logger = None, renders_dir: str = None):
         self.name = name
-        self.renders_dir = f"{settings['renders_dir']}{self.name}/"
-        self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
-        self.logger = logger.init_logger(module="Visualization", name=self.name, log_callback=log_callback)
-        self.persist_read = partial(persist_read, directory=self.persistent_files_dir)
-        self.max_resolution = (15000, 15000)
-        self.zoom = 1
-        self.coord2km = (111.32, 66.4)  # distances between 2 deg of lat/lon
-        self.bounds = None
-        self.street_network = None
-        self.node_coords = dict()
+        self.mode = mode
         self.color_mode = color_mode
+
+        self.logger = logger.init_logger(module="Visualization", name=self.name, log_callback=log_callback)
+        self.logger.info("Logging for Visualization initialized")
+
+        self.renders_dir = renders_dir if renders_dir is None else "{settings['renders_dir']}{self.name}/"
+        self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
+        self.persist_read = partial(persist_read, directory=self.persistent_files_dir)
         self.traffic_load_filename_expression = re.compile("^traffic_load_[0-9]+.pystreets$")
 
-    def visualize(self, mode='TRAFFIC_LOAD'):
+        self.max_resolution = settings['max_resolution']
+        self.zoom = settings['zoom']
+
+        self.node_coords = dict()
+
+        self.street_network = street_network
+
+
+    @property
+    def street_network(self) -> StreetNetwork:
+        return self._street_network
+
+    @street_network.setter
+    def street_network(self, value: StreetNetwork):
+        self._street_network = value
+        self.bounds = self.street_network.bounds
+        self.zoom = self.max_resolution[0] / max((self.bounds[0][1] - self.bounds[0][0]) * self.coord2km[0],
+                                                 (self.bounds[1][1] - self.bounds[1][0]) * self.coord2km[1])
+
+        self.node_coords = dict()
+        for node in self.street_network.get_nodes():
+            coords = self.street_network.node_coordinates(node)
+            point = dict()
+            for i in range(2):
+                point[i] = (coords[i] - self.bounds[i][0]) * self.coord2km[i] * self.zoom
+            self.node_coords[node] = (point[1], self.max_resolution[1] - point[0])  # x = longitude, y = latitude
+
+    @property
+    def mode(self):
+        return self._mode
+
+    @mode.setter
+    def mode(self, value: str):
+        value = value.upper()  # accept input independent of case
+        possible_modes = ("TRAFFIC_LOAD", "MAX_SPEED", "IDEAL_SPEED", "ACTUAL_SPEED")
+        if value not in possible_modes:
+            raise ValueError(f"Value must be one of {possible_modes}")
+        self._mode = value
+
+    @property
+    def color_mode(self):
+        return self._color_mode
+
+    @color_mode.setter
+    def color_mode(self, value):
+        value = value.upper()
+        possible_color_modes = ("MONOCHROME", "HEATMAP")
+        if value not in possible_color_modes:
+            raise ValueError(f"Value must be one of {possible_color_modes}")
+        self._color_mode = value
+
+    def visualize(self):
         self.logger.info("Finding files")
         all_files = os.listdir(self.persistent_files_dir)
         traffic_load_files = list(filter(self.traffic_load_filename_expression.search, all_files))
 
         self.logger.info("Reading street network")
-        self.read_street_network(street_network_filename="street_network.pystreets")
+        self.street_network = self.persist_read("street_network.pystreets")
 
         self.logger.debug("Finding maximum traffic load")
         max_load = 1
@@ -68,17 +130,17 @@ class Visualization(object):
                 traffic_load = self.persist_read(traffic_load_filename, is_array=True)
 
                 self.logger.info("Drawing data")
-                street_network_image: Image = self.draw(max_load, traffic_load, mode)
+                street_network_image: Image = self.draw(max_load, traffic_load)
                 self.logger.info(f"Saving image to disk \
-                                 ({self.renders_dir}{mode.lower()}_{step}.png)")
+                                 ({self.renders_dir}{self.mode.lower()}_{step}.png)")
                 os.makedirs(os.path.dirname(self.renders_dir), exist_ok=True)
-                street_network_image.save(f"{self.renders_dir}{mode.lower()}_{step}.png")
+                street_network_image.save(f"{self.renders_dir}{self.mode.lower()}_{step}.png")
 
                 traffic_load_files.remove(traffic_load_filename)
 
         self.logger.info("Done!")
 
-    def draw(self, max_load: int, traffic_load: list, mode: str) -> Image:
+    def draw(self, max_load: int, traffic_load: list) -> Image:
         street_network_image = Image.new("RGBA", self.max_resolution, (0, 0, 0, 255))
         draw = ImageDraw.Draw(street_network_image)
         finished_streets = dict()
@@ -86,41 +148,29 @@ class Visualization(object):
             width = 1  # max_speed / 50 looks bad for motorways
             value = 0
             current_traffic_load = traffic_load[street_index] / number_of_lanes
-            if mode == 'TRAFFIC_LOAD':
+            if self.mode == 'TRAFFIC_LOAD':
                 value = 1.0 * (current_traffic_load / max_load) ** (1 / 2)  # Sqrt for better visibility
-            if mode == 'MAX_SPEED':
+            if self.mode == 'MAX_SPEED':
                 value = min(1.0, 1.0 * max_speed / 140)
-            if mode == 'IDEAL_SPEED':
+            if self.mode == 'IDEAL_SPEED':
                 ideal_speed = calculate_driving_speed(length, max_speed, 0)
                 value = min(1.0, 1.0 * ideal_speed / 140)
-            if mode == 'ACTUAL_SPEED':
+            if self.mode == 'ACTUAL_SPEED':
                 actual_speed = calculate_driving_speed(length, max_speed, current_traffic_load)
                 value = min(1.0, 1.0 * actual_speed / 140)
-            if mode == "NUMBER_OF_LANES":
+            if self.mode == "NUMBER_OF_LANES":
                 value = min(1.0, number_of_lanes / 5)
             if frozenset(street) in finished_streets.keys():
                 value += finished_streets[frozenset(street)]
             color = self.value_to_color(value)
-            draw.line([self.node_coords[street[0]], self.node_coords[street[1]]],
-                      fill=color, width=width)
+            draw.line([self.node_coords[street[0]], self.node_coords[street[1]]], fill=color, width=width)
             finished_streets[frozenset(street)] = value
-        street_network_image = self.image_finalize(street_network_image, max_load, mode)
+
+        self.logger.info("Finalizing Image")
+        street_network_image = self._image_finalize(street_network_image, max_load)
         return street_network_image
 
-    def read_street_network(self, street_network_filename):
-        self.street_network = self.persist_read(street_network_filename)
-        self.bounds = self.street_network.bounds
-        self.zoom = self.max_resolution[0] / max((self.bounds[0][1] - self.bounds[0][0]) * self.coord2km[0],
-                                                 (self.bounds[1][1] - self.bounds[1][0]) * self.coord2km[1])
-        for node in self.street_network.get_nodes():
-            coords = self.street_network.node_coordinates(node)
-            point = dict()
-            for i in range(2):
-                point[i] = (coords[i] - self.bounds[i][0]) * self.coord2km[i] * self.zoom
-            self.node_coords[node] = (
-                point[1], self.max_resolution[1] - point[0])  # x = longitude, y = latitude
-
-    def value_to_color(self, value):
+    def value_to_color(self, value: float):
         value = min(1.0, max(0.0, value))
         if self.color_mode == 'MONOCHROME':
             brightness = min(255, int(15 + 240 * value))
@@ -156,7 +206,7 @@ class Visualization(object):
         bar_inner_width = bar_inner_width - (bar_outer_width - bar_inner_width) % 4
         bar_offset = max(2, (bar_outer_width - bar_inner_width) // 2)
 
-        if mode in ['TRAFFIC_LOAD', 'MAX_SPEED', 'IDEAL_SPEED', 'ACTUAL_SPEED', 'NUMBER_OF_LANES']:
+        if self.mode in ['TRAFFIC_LOAD', 'MAX_SPEED', 'IDEAL_SPEED', 'ACTUAL_SPEED', 'NUMBER_OF_LANES']:
             draw.rectangle([(0, 0), (bar_outer_width, legend.size[1] - 1)], fill=white)
             border_width = int(bar_offset / 2)
             draw.rectangle(
@@ -166,19 +216,19 @@ class Visualization(object):
                 value = 1.0 * (y - bar_offset) / (legend.size[1] - 2 * bar_offset)
                 color = self.value_to_color(1.0 - value)  # highest value at the top
                 draw.line([(bar_offset, y), (bar_offset + bar_inner_width, y)], fill=color)
-            if mode == 'TRAFFIC_LOAD':
+            if self.mode == 'TRAFFIC_LOAD':
                 top_text = str(round(max_load, 1)) + " cars gone through per lane"
                 bottom_text = "0 cars gone through"
-            elif mode == 'MAX_SPEED':
+            elif self.mode == 'MAX_SPEED':
                 top_text = "speed limit: 140 km/h or higher"
                 bottom_text = "speed limit: 0 km/h"
-            elif mode == 'IDEAL_SPEED':
+            elif self.mode == 'IDEAL_SPEED':
                 top_text = "ideal driving speed: 140 km/h or higher"
                 bottom_text = "ideal driving speed: 0 km/h"
-            elif mode == 'ACTUAL_SPEED':
+            elif self.mode == 'ACTUAL_SPEED':
                 top_text = "actual driving speed: 140 km/h or higher"
                 bottom_text = "actual driving speed: 0 km/h"
-            elif mode == "NUMBER_OF_LANES":
+            elif self.mode == "NUMBER_OF_LANES":
                 top_text = "5 lanes"
                 bottom_text = "0 lanes"
             else:
@@ -202,8 +252,7 @@ class Visualization(object):
         return final
 
     @staticmethod
-    def auto_crop(image):
-        # remove black edges from image
+    def auto_crop(image: Image) -> Image:
         empty = Image.new("RGBA", image.size, (0, 0, 0))
         difference = ImageChops.difference(image, empty)
         bbox = difference.getbbox()
@@ -212,4 +261,5 @@ class Visualization(object):
 
 if __name__ == "__main__":
     visualization = Visualization(name="Lübeck Klein Variation")
-    visualization.visualize(mode="TRAFFIC_LOAD")
+    visualization.mode = "TRAFFIC_LOAD"
+    visualization.visualize()
