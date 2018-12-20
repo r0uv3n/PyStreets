@@ -3,11 +3,9 @@ settings = {
     "renders_dir"                      : "./renders/",
     "persistent_files_dir"             : "./persistent files/",
     "osm_dir"                          : "./osm/",
-    "persist_traffic_load"             : False,
     "random_seed"                      : None,  # set to None to use system time
 
     # logging
-    "logging"                          : "stdout",
     "logs_dir"                         : "./logs/",
     "logging_level"                    : "DEBUG",
 
@@ -15,6 +13,7 @@ settings = {
     "max_simulation_steps"             : 4,
     "number_of_residents"              : 1000,
     "use_attributed_nodes"             : True,
+
     # period over which the traffic is distributed (24h = the hole day)
     "traffic_period_duration"          : 2,  # h
     "car_length"                       : 4,  # m
