@@ -95,8 +95,8 @@ class StreetNetwork(object):
                 street_attributes[StreetNetwork.STREET_ATTRIBUTE_INDEX['max_speed']],
                 street_attributes[StreetNetwork.STREET_ATTRIBUTE_INDEX['number_of_lanes']])
 
-    # iterator to iterate over the streets and their attributes
     def __iter__(self):
+        """Iterate over the streets and their attributes"""
         for street in self._graph.edges():
             # get street attributes
             yield self.get_street_attributes(street)

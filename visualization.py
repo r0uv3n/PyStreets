@@ -76,6 +76,18 @@ class Visualization(object):
 
     @property
     def mode(self):
+        """
+        TRAFFIC_LOAD - Display absolute traffic load.
+        MAX_SPEED    - Display local speed limits.
+        IDEAL_SPEED  - Display calculated ideal speed based on safe breaking distance.
+        ACTUAL_SPEED - Display calculated actual speed based on traffic load.
+
+        Args:
+
+        Returns:
+          : The currently selected mode.
+
+        """
         return self._mode
 
     @mode.setter
@@ -88,6 +100,14 @@ class Visualization(object):
 
     @property
     def color_mode(self):
+        """
+        HEATMAP      - Vary hue on a temperature-inspired scale from dark blue to red.
+        MONOCHROME   - Vary brightness from black to white.
+
+        Returns:
+          : The currently selected color_mode.
+
+        """
         return self._color_mode
 
     @color_mode.setter
@@ -183,15 +203,18 @@ class Visualization(object):
                 return "hsl(" + str(int(255 * (1 - (value - limit) / 1 - limit))) + ",100%," + str(
                         30 + 20 * value) + "%)"
 
-    def image_finalize(self, street_network_image, max_load, mode):
+    def _image_finalize(self, street_network_image: Image, max_load: int) -> Image:
         """
-        :param mode
-        TRAFFIC_LOAD - display absolute traffic load
-        MAX_SPEED    - display local speed limits
-        IDEAL_SPEED  - display calculated ideal speed based on safe breaking distance
-        ACTUAL_SPEED - display calculated actual speed based on traffic load:
+        Take the current street network and make it pretty. Crop, add legend and disclaimer, that the source of all
+        data is OpenStreetMaps.
+
+        Args:
+          street_network_image: Image:
+          max_load: int:
+
+        Returns:
+            Pretty PIL.Image version of the street_network_image
         """
-        # take the current street network and make it pretty
         street_network_image = self.auto_crop(street_network_image)
 
         white = (255, 255, 255, 0)
@@ -202,6 +225,7 @@ class Visualization(object):
         draw = ImageDraw.Draw(legend)
         bar_outer_width = self.max_resolution[0] // 50
         bar_inner_width = min(bar_outer_width - 4, int(bar_outer_width * 0.85))
+
         # make sure the difference is a multiple of 4
         bar_inner_width = bar_inner_width - (bar_outer_width - bar_inner_width) % 4
         bar_offset = max(2, (bar_outer_width - bar_inner_width) // 2)
@@ -253,6 +277,15 @@ class Visualization(object):
 
     @staticmethod
     def auto_crop(image: Image) -> Image:
+        """
+        Remove black edges from image
+
+        Args:
+          image: PIL.Image to be cropped
+
+        Returns:
+            Cropped version of the given Image
+        """
         empty = Image.new("RGBA", image.size, (0, 0, 0))
         difference = ImageChops.difference(image, empty)
         bbox = difference.getbbox()

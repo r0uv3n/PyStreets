@@ -11,7 +11,25 @@ from visualization import Visualization
 
 
 class PyStreets(object):
-    """This class runs the Streets program."""
+    """"Loads data, simulates and visualizes traffic.
+
+    Attributes:
+        name:
+        osm_filename: Filename of the .osm file to be used, which should be located in the osm_dir given in
+        settings.py. Not necessary if existing_data is True
+        existing_data: Path of an existing data.pystreets file to be used instead of data newly extracted from a .osm
+        file. If not None, significantly reduces startup time.
+        existing_network: Path of an existing street_network.pystreets file. Does not do anything if existing_data is
+        None
+        visualize_mode: 4 options:
+    TRAFFIC_LOAD - Display absolute traffic load.
+    MAX_SPEED    - Display local speed limits.
+    IDEAL_SPEED  - Display calculated ideal speed based on safe breaking distance.
+    ACTUAL_SPEED - Display calculated actual speed based on traffic load.
+        color_mode: 2 options:
+    HEATMAP      - Vary hue on a temperature-inspired scale from dark blue to red.
+    MONOCHROME   - Vary brightness from black to white.
+        """
 
     def __init__(self, name, osm_filename=None, existing_data=None, existing_network=None,
                  visualize_mode="TRAFFIC_LOAD",
@@ -60,6 +78,15 @@ class PyStreets(object):
         assert self.visualization.persistent_files_dir == self.persistent_files_dir
 
     def run(self, visualize=True):
+        """
+
+        Args:
+            visualize: If True, generates and saves Visualizations of the traffic load according to the settings in
+            self.visualization
+
+        Returns:
+            None
+        """
         self.logger.info("Generating test_trips")
         number_of_residents = settings["number_of_residents"]
         if settings["use_attributed_nodes"]:

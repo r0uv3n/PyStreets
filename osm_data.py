@@ -1,5 +1,6 @@
 from collections import namedtuple
-from math import sqrt, radians, sin, cos, asin
+from logging import Logger  # for typing
+from math import sqrt
 
 import osmread
 
@@ -11,6 +12,14 @@ Coordinate = namedtuple("Coordinate", ["longitude", "latitude"])
 
 # This class reads an OSM file and builds a graph out of it
 class GraphBuilder(object):
+    """Parse the input file and save its contents in memory
+
+    Arguments:
+        osm_path: Path of the .osm file to be used, located in the osm_dir given in settings.py. Not
+        necessary if existing_data is True
+        log_callback: Parent Logger; If None, logs to a new file.
+        """
+
     latitude = 0
     longitude = 1
 
@@ -160,7 +169,7 @@ class GraphBuilder(object):
         return self.street_network
 
     def find_node_categories(self):
-        # collect relevant categories of nodes in their respective sets
+        """Collect relevant categories of nodes in their respective sets"""
         # TODO there has to be a better way to do this
         # TODO do this inside class StreetNetwork?
         for relation in self.all_osm_relations.values():
@@ -248,9 +257,8 @@ class GraphBuilder(object):
         return dist * 1000  # return distance in m
 
     def length_haversine(self, id1, id2):
-        # calculate distance using the haversine formula, which incorporates
-        # earth curvature
-        # see http://en.wikipedia.org/wiki/Haversine_formula
+        """Calculate distance using the haversine formula, which incorporates earth curvature. See
+        http://en.wikipedia.org/wiki/Haversine_formula"""
         lat1 = self.coords[id1][self.latitude]
         lon1 = self.coords[id1][self.longitude]
         lat2 = self.coords[id2][self.latitude]
