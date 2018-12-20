@@ -17,7 +17,7 @@ class Visualization(object):
     This class turns persistent traffic load data into images
 
     Attributes:
-      name: Determines renders_dir, unnecessary if renders_dir is given
+      name: Determines renders_dir and is used for logging
       mode: 4 options:
     TRAFFIC_LOAD - Display absolute traffic load.
     MAX_SPEED    - Display local speed limits.
@@ -33,7 +33,7 @@ class Visualization(object):
     ATTRIBUTE_KEY_COMPONENT = 2
     coord2km = (111.32, 66.4)  # distances between 2 deg of lat/lon
 
-    def __init__(self, name: str = None, mode: str = "Traffic_Load", color_mode="HEATMAP",
+    def __init__(self, name: str, mode: str = "Traffic_Load", color_mode="HEATMAP",
                  street_network: StreetNetwork = None, log_callback: Logger = None, renders_dir: str = None):
         self.name = name
         self.mode = mode

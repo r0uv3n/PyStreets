@@ -10,15 +10,14 @@ from street_network import StreetNetwork
 Coordinate = namedtuple("Coordinate", ["longitude", "latitude"])
 
 
-# This class reads an OSM file and builds a graph out of it
 class GraphBuilder(object):
-    """Parse the input file and save its contents in memory
+    """Parse the input file and build a graph out of it (save its contents in memory)
 
-    Arguments:
-        osm_path: Path of the .osm file to be used, located in the osm_dir given in settings.py. Not
-        necessary if existing_data is True
-        log_callback: Parent Logger; If None, logs to a new file.
-        """
+        Arguments:
+            osm_path: Path of the .osm file to be used, located in the osm_dir given in settings.py. Not
+            necessary if existing_data is True
+            log_callback: Parent Logger; If None, logs to a new file.
+            """
 
     latitude = 0
     longitude = 1

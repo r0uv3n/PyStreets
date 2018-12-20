@@ -14,14 +14,14 @@ class PyStreets(object):
     """"Loads data, simulates and visualizes traffic.
 
     Attributes:
-        name:
+        name: Determines renders_dir and is used for logging
         osm_filename: Filename of the .osm file to be used, which should be located in the osm_dir given in
         settings.py. Not necessary if existing_data is True
         existing_data: Path of an existing data.pystreets file to be used instead of data newly extracted from a .osm
         file. If not None, significantly reduces startup time.
         existing_network: Path of an existing street_network.pystreets file. Does not do anything if existing_data is
         None
-        visualize_mode: 4 options:
+        visualization_mode: 4 options:
     TRAFFIC_LOAD - Display absolute traffic load.
     MAX_SPEED    - Display local speed limits.
     IDEAL_SPEED  - Display calculated ideal speed based on safe breaking distance.
@@ -72,7 +72,7 @@ class PyStreets(object):
             self.logger.info("Reading existing street network from disk")
             self.street_network = self.persist_read(existing_network)
 
-        self.visualization = Visualization(name=self.name, mode=visualize_mode, color_mode=color_mode,
+        self.visualization = Visualization(name=self.name, mode=visualization_mode, color_mode=color_mode,
                                            street_network=self.street_network, log_callback=self.logger)
         assert self.visualization.persistent_files_dir == self.persistent_files_dir
 
