@@ -1,5 +1,4 @@
 from random import sample
-from time import time
 
 
 def generate_trips(number_of_residents, potential_origins, potential_goals):
