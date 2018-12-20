@@ -32,8 +32,7 @@ class PyStreets(object):
         """
 
     def __init__(self, name, osm_filename=None, existing_data=None, existing_network=None,
-                 visualize_mode="TRAFFIC_LOAD",
-                 color_mode="HEATMAP"):
+                 visualization_mode="TRAFFIC_LOAD", color_mode="HEATMAP"):
         self.name = name
 
         # set up logging
@@ -112,8 +111,6 @@ class PyStreets(object):
             if step > 0 and step % settings["steps_between_street_construction"] == 0:
                 self.logger.info("Road construction taking place")
                 simulation.road_construction()
-                if settings["persist_traffic_load"]:
-                    self.persist_write(f"street_network_{step + 1}.pystreets", simulation.street_network)
 
             self.logger.info(f"Running simulation step {step + 1} of {settings['max_simulation_steps']} ")
             simulation.step()
@@ -128,8 +125,30 @@ class PyStreets(object):
 
 
 if __name__ == "__main__":
-    instance_name = "luebeck_zentrum.osm"
-    visualization_mode = "TRAFFIC_LOAD"  # "TRAFFIC_LOAD", "IDEAL_SPEED", "ACTUAL_SPEED", "MAX_SPEED" - check docstrings
-    MainSim = PyStreets(osm_filename="luebeck_klein_1.osm", existing_data=None,
-                        existing_network=None, name="Lübeck Klein Variation", visualize_mode=visualization_mode)
-    MainSim.run()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--osm_filename", "-f", help='''Filename of the .osm file to be used, which should be located in the 
+    osm_dir given in settings.py. Not necessary if existing_data is True''', default="test.osm")
+    parser.add_argument("--name", "-n", help='''Determines directory for renders and is used for logging''',
+                        default="test")
+    parser.add_argument("--existing_data", help='''Path of an existing data.pystreets file to be used instead of data 
+    newly extracted from a .osm file. If not None, significantly reduces startup time.''', default=None)
+    parser.add_argument("--existing_network", help='''Path of an existing street_network.pystreets file. Does not do 
+    anything if existing_data is None''', default=None)
+    parser.add_argument("--no-visualization",
+                        help='''If True, do not generate and save Visualizations of the traffic load''',
+                        action="store_true")
+    parser.add_argument("--visualization-mode", help='''No effect if --no-visualization is given. 4 options:
+    TRAFFIC_LOAD - Display absolute traffic load.
+    MAX_SPEED    - Display local speed limits.
+    IDEAL_SPEED  - Display calculated ideal speed based on safe breaking distance.
+    ACTUAL_SPEED - Display calculated actual speed based on traffic load.''', default="TRAFFIC_LOAD")
+    parser.add_argument("--color-mode", help='''No effect if --no-visualization is given. 2 options: 
+    HEATMAP      - Vary hue on a temperature-inspired scale from dark blue to red. 
+    MONOCHROME   - Vary brightness from black to white.''', default="HEATMAP")
+    args = parser.parse_args()
+    MainSim = PyStreets(osm_filename=args.osm_filename, existing_data=args.existing_data,
+                        existing_network=args.existing_network, name=args.name,
+                        visualization_mode=args.visualization_mode, color_mode=args.color_mode)
+    MainSim.run(visualize=not args.no_visualization)

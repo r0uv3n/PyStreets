@@ -3,7 +3,6 @@ settings = {
     "renders_dir"                      : "./renders/",
     "persistent_files_dir"             : "./persistent files/",
     "osm_dir"                          : "./osm/",
-    "persist_traffic_load"             : False,
     "random_seed"                      : None,  # set to None to use system time
 
     # logging

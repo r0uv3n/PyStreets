@@ -42,7 +42,7 @@ class Visualization(object):
         self.logger = logger.init_logger(module="Visualization", name=self.name, log_callback=log_callback)
         self.logger.info("Logging for Visualization initialized")
 
-        self.renders_dir = renders_dir if renders_dir is None else "{settings['renders_dir']}{self.name}/"
+        self.renders_dir = renders_dir if renders_dir is not None else f"{settings['renders_dir']}{self.name}/"
         self.persistent_files_dir = f"{settings['persistent_files_dir']}{self.name}/"
         self.persist_read = partial(persist_read, directory=self.persistent_files_dir)
         self.traffic_load_filename_expression = re.compile("^traffic_load_[0-9]+.pystreets$")
